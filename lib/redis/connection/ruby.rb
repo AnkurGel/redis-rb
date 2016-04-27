@@ -65,13 +65,16 @@ class Redis
 
       def _read_from_socket(nbytes)
 
+        retried_from_timeout = false
         begin
           read_nonblock(nbytes)
 
-        rescue *NBIO_EXCEPTIONS
+        rescue *NBIO_EXCEPTIONS => e
           if IO.select([self], nil, nil, @timeout)
             retry
           else
+            # Additionally log
+            retry if (!retried_from_timeout && (retried_from_timeout = true))
             raise Redis::TimeoutError
           end
         end
